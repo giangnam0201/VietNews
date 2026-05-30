@@ -40,7 +40,35 @@ jobs:
             -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             -H "Accept: application/vnd.github+json" \
             "https://api.github.com/repos/${{ github.repository }}/pages" \
-            -d '{"source":{"branch":"gh-pages","path":"/"}}' || echo "Pages already configured or permission denied"
+            -d '{"source":{"branch":"gh-pages","path":"/"}}' || true
+
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+      
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+      
+      - name: Build Android APK
+        working-directory: ./android
+        run: |
+          chmod +x gradlew 2>/dev/null || true
+          gradle wrapper --gradle-version 8.5
+          ./gradlew assembleRelease --no-daemon --stacktrace
+      
+      - name: Upload Android APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: android/app/build/outputs/apk/release/*.apk
+          if-no-files-found: warn
 
   build-electron:
     runs-on: ${{ matrix.os }}
@@ -59,19 +87,19 @@ jobs:
       - name: Install dependencies
         run: npm ci
       
-      - name: Build Electron app (Linux)
+      - name: Build Electron (Linux)
         if: matrix.os == 'ubuntu-latest'
         run: npx electron-builder --linux AppImage --publish never
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
-      - name: Build Electron app (Windows)
+      - name: Build Electron (Windows)
         if: matrix.os == 'windows-latest'
         run: npx electron-builder --win nsis --publish never
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
-      - name: Build Electron app (macOS)
+      - name: Build Electron (macOS)
         if: matrix.os == 'macos-latest'
         run: npx electron-builder --mac dmg --publish never
         env:
@@ -88,7 +116,7 @@ jobs:
           if-no-files-found: ignore
 
   create-release:
-    needs: [build-web, build-electron]
+    needs: [build-web, build-android, build-electron]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -98,31 +126,43 @@ jobs:
         with:
           path: ./artifacts
       
-      - name: Display artifacts
-        run: find ./artifacts -type f | head -20
+      - name: List artifacts
+        run: find ./artifacts -type f | sort
       
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ github.run_number }}
-          name: VietNews v1.0.${{ github.run_number }}
+          name: VietNews v2.0.${{ github.run_number }}
           body: |
-            ## VietNews - All-in-One Vietnamese News Aggregator
+            ## VietNews v2.0 - All-in-One Vietnamese News Aggregator
+            
+            ### What's New
+            - Redesigned modern UI with dark mode
+            - Built-in article reader (no ads!)
+            - Multiple CORS proxy fallback for reliability
+            - Skeleton loading animations
+            - Android APK support
+            - Optimized build sizes
             
             ### Downloads
-            - **Web**: https://giangnam0201.github.io/VietNews/
-            - **Windows**: Download the .exe file below
-            - **macOS**: Download the .dmg file below
-            - **Linux**: Download the .AppImage file below
+            | Platform | Link |
+            |----------|------|
+            | Web (PWA) | https://giangnam0201.github.io/VietNews/ |
+            | Android | Download APK below |
+            | Windows | Download .exe below |
+            | macOS | Download .dmg below |
+            | Linux | Download .AppImage below |
             
             ### Features
-            - Aggregates news from 10+ Vietnamese sources
-            - No ads, clean reading experience
-            - Dark mode support
-            - Bookmark articles
-            - Search & filter by category/source
-            - PWA support for mobile
-            - Desktop apps for Windows, macOS, Linux
+            - 10+ Vietnamese news sources aggregated
+            - Zero ads, clean reading experience
+            - Built-in article scraper/reader
+            - Dark/Light mode
+            - Bookmark & search
+            - Filter by category/source
+            - PWA installable on mobile
+            - Auto-refresh every 5 minutes
           files: |
             ./artifacts/**/*
           draft: false

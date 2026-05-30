@@ -8,48 +8,42 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'icon.png', 'icon-192.png', 'icon-512.png'],
+      includeAssets: ['icon.png', 'icon-192.png', 'icon-512.png', 'icon.svg'],
       manifest: {
         name: 'VietNews - Tin Tức Việt Nam',
         short_name: 'VietNews',
         description: 'Tổng hợp tin tức từ tất cả báo Việt Nam - không quảng cáo',
-        theme_color: '#dc2626',
-        background_color: '#ffffff',
+        theme_color: '#E53935',
+        background_color: '#F5F5F7',
         display: 'standalone',
         orientation: 'portrait',
         scope: '/VietNews/',
         start_url: '/VietNews/',
+        categories: ['news', 'magazines'],
         icons: [
-          {
-            src: 'icon-192.png',
-            sizes: '192x192',
-            type: 'image/png'
-          },
-          {
-            src: 'icon-512.png',
-            sizes: '512x512',
-            type: 'image/png'
-          },
-          {
-            src: 'icon-512.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'maskable'
-          }
+          { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
+          { src: 'icon-512.png', sizes: '512x512', type: 'image/png' },
+          { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
         ]
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        globPatterns: ['**/*.{js,css,html,png,svg,woff2}'],
         runtimeCaching: [
           {
-            urlPattern: /^https:\/\/.*\.rss2json\.com\/.*/i,
+            urlPattern: /^https:\/\/(api\.allorigins\.win|corsproxy\.io|api\.codetabs\.com)\/.*/i,
             handler: 'NetworkFirst',
             options: {
               cacheName: 'rss-feeds',
-              expiration: {
-                maxEntries: 100,
-                maxAgeSeconds: 60 * 30
-              }
+              expiration: { maxEntries: 50, maxAgeSeconds: 60 * 15 },
+              networkTimeoutSeconds: 10
+            }
+          },
+          {
+            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'google-fonts',
+              expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 }
             }
           }
         ]
@@ -58,6 +52,17 @@ export default defineConfig({
   ],
   build: {
     outDir: 'dist',
-    assetsDir: 'assets'
+    assetsDir: 'assets',
+    minify: 'terser',
+    terserOptions: {
+      compress: { drop_console: true, drop_debugger: true }
+    },
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom']
+        }
+      }
+    }
   }
 });

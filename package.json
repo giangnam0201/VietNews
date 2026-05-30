@@ -1,6 +1,6 @@
 {
   "name": "vietnews",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "VietNews - All-in-One Vietnamese News Aggregator",
   "private": true,
   "type": "module",
@@ -12,36 +12,72 @@
     "electron:build": "vite build && electron-builder",
     "electron:build:win": "vite build && electron-builder --win",
     "electron:build:mac": "vite build && electron-builder --mac",
-    "electron:build:linux": "vite build && electron-builder --linux"
+    "electron:build:linux": "vite build && electron-builder --linux",
+    "android:build": "echo 'Build Android in CI with Gradle'"
   },
   "main": "electron/main.js",
   "build": {
     "appId": "com.vietnews.app",
     "productName": "VietNews",
+    "compression": "maximum",
     "directories": {
       "output": "release"
     },
     "files": [
       "dist/**/*",
-      "electron/**/*"
+      "electron/**/*",
+      "!node_modules/**/*"
     ],
+    "asar": true,
     "win": {
-      "target": "nsis",
-      "icon": "public/icon.png"
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "public/icon.png",
+      "artifactName": "VietNews-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": false,
+      "deleteAppDataOnUninstall": true,
+      "installerIcon": "public/icon.png"
     },
     "mac": {
-      "target": "dmg",
-      "icon": "public/icon.png"
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "universal"
+          ]
+        }
+      ],
+      "icon": "public/icon.png",
+      "artifactName": "VietNews-${version}-mac.${ext}",
+      "minimumSystemVersion": "10.15"
     },
     "linux": {
-      "target": "AppImage",
-      "icon": "public/icon.png"
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "public/icon.png",
+      "artifactName": "VietNews-${version}-linux.${ext}",
+      "category": "News"
     }
   },
   "dependencies": {
     "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "rss-parser": "^3.13.0"
+    "react-dom": "^18.2.0"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.2.1",
