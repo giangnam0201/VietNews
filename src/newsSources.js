@@ -1,8 +1,5 @@
-// Vietnamese news RSS feeds
-// Strategy: Use rss2json.com with rate limiting (max 5 concurrent requests)
-// Stagger requests to avoid 429 rate limit errors
-
-const RSS2JSON = 'https://api.rss2json.com/v1/api.json?rss_url=';
+// VietNews - Our own Cloudflare Worker proxy (no third-party dependencies)
+const PROXY = 'https://vietnews-proxy.giangnam020100.workers.dev/?url=';
 
 export const NEWS_SOURCES = [
   {
@@ -14,8 +11,10 @@ export const NEWS_SOURCES = [
       { url: 'https://vnexpress.net/rss/thoi-su.rss', category: 'Thời sự' },
       { url: 'https://vnexpress.net/rss/the-gioi.rss', category: 'Thế giới' },
       { url: 'https://vnexpress.net/rss/kinh-doanh.rss', category: 'Kinh doanh' },
+      { url: 'https://vnexpress.net/rss/khoa-hoc.rss', category: 'Công nghệ' },
       { url: 'https://vnexpress.net/rss/giai-tri.rss', category: 'Giải trí' },
       { url: 'https://vnexpress.net/rss/the-thao.rss', category: 'Thể thao' },
+      { url: 'https://vnexpress.net/rss/giao-duc.rss', category: 'Giáo dục' },
       { url: 'https://vnexpress.net/rss/suc-khoe.rss', category: 'Sức khỏe' },
     ]
   },
@@ -30,6 +29,7 @@ export const NEWS_SOURCES = [
       { url: 'https://tuoitre.vn/rss/kinh-doanh.rss', category: 'Kinh doanh' },
       { url: 'https://tuoitre.vn/rss/giai-tri.rss', category: 'Giải trí' },
       { url: 'https://tuoitre.vn/rss/the-thao.rss', category: 'Thể thao' },
+      { url: 'https://tuoitre.vn/rss/giao-duc.rss', category: 'Giáo dục' },
       { url: 'https://tuoitre.vn/rss/suc-khoe.rss', category: 'Sức khỏe' },
     ]
   },
@@ -44,6 +44,7 @@ export const NEWS_SOURCES = [
       { url: 'https://thanhnien.vn/rss/giai-tri.rss', category: 'Giải trí' },
       { url: 'https://thanhnien.vn/rss/the-thao.rss', category: 'Thể thao' },
       { url: 'https://thanhnien.vn/rss/suc-khoe.rss', category: 'Sức khỏe' },
+      { url: 'https://thanhnien.vn/rss/giao-duc.rss', category: 'Giáo dục' },
     ]
   },
   {
@@ -57,7 +58,20 @@ export const NEWS_SOURCES = [
       { url: 'https://dantri.com.vn/rss/kinh-doanh.rss', category: 'Kinh doanh' },
       { url: 'https://dantri.com.vn/rss/giai-tri.rss', category: 'Giải trí' },
       { url: 'https://dantri.com.vn/rss/the-thao.rss', category: 'Thể thao' },
+      { url: 'https://dantri.com.vn/rss/giao-duc.rss', category: 'Giáo dục' },
       { url: 'https://dantri.com.vn/rss/suc-khoe.rss', category: 'Sức khỏe' },
+      { url: 'https://dantri.com.vn/rss/suc-manh-so.rss', category: 'Công nghệ' },
+    ]
+  },
+  {
+    id: 'kenh14',
+    name: 'Kênh 14',
+    color: '#F57C00',
+    feeds: [
+      { url: 'https://kenh14.vn/home.rss', category: 'Mới nhất' },
+      { url: 'https://kenh14.vn/star.rss', category: 'Giải trí' },
+      { url: 'https://kenh14.vn/doi-song.rss', category: 'Đời sống' },
+      { url: 'https://kenh14.vn/xa-hoi.rss', category: 'Thời sự' },
     ]
   },
   {
@@ -70,6 +84,38 @@ export const NEWS_SOURCES = [
       { url: 'https://vietnamnet.vn/rss/giai-tri.rss', category: 'Giải trí' },
       { url: 'https://vietnamnet.vn/rss/the-thao.rss', category: 'Thể thao' },
       { url: 'https://vietnamnet.vn/rss/suc-khoe.rss', category: 'Sức khỏe' },
+      { url: 'https://vietnamnet.vn/rss/cong-nghe.rss', category: 'Công nghệ' },
+    ]
+  },
+  {
+    id: 'laodong',
+    name: 'Lao Động',
+    color: '#BF360C',
+    feeds: [
+      { url: 'https://laodong.vn/rss/home.rss', category: 'Mới nhất' },
+      { url: 'https://laodong.vn/rss/thoi-su.rss', category: 'Thời sự' },
+      { url: 'https://laodong.vn/rss/the-gioi.rss', category: 'Thế giới' },
+      { url: 'https://laodong.vn/rss/kinh-te.rss', category: 'Kinh doanh' },
+    ]
+  },
+  {
+    id: 'nguoiduatin',
+    name: 'Người Đưa Tin',
+    color: '#E65100',
+    feeds: [
+      { url: 'https://www.nguoiduatin.vn/rss/home.rss', category: 'Mới nhất' },
+      { url: 'https://www.nguoiduatin.vn/rss/phap-luat.rss', category: 'Pháp luật' },
+    ]
+  },
+  {
+    id: 'nhandan',
+    name: 'Nhân Dân',
+    color: '#C62828',
+    feeds: [
+      { url: 'https://nhandan.vn/rss/chinhtri-1185.rss', category: 'Thời sự' },
+      { url: 'https://nhandan.vn/rss/thegioi-1186.rss', category: 'Thế giới' },
+      { url: 'https://nhandan.vn/rss/kinhte-1187.rss', category: 'Kinh doanh' },
+      { url: 'https://nhandan.vn/rss/thethao-1190.rss', category: 'Thể thao' },
     ]
   },
 ];
@@ -80,78 +126,65 @@ export const CATEGORIES = [
   'Thời sự',
   'Thế giới',
   'Kinh doanh',
+  'Công nghệ',
   'Giải trí',
   'Thể thao',
+  'Giáo dục',
   'Sức khỏe',
+  'Đời sống',
+  'Pháp luật',
 ];
 
-// Rate-limited fetch: processes array of URLs in batches
-const delay = (ms) => new Promise(r => setTimeout(r, ms));
-
-export async function fetchFeedJSON(rssUrl) {
-  const url = `${RSS2JSON}${encodeURIComponent(rssUrl)}`;
-  const res = await fetch(url);
-  if (!res.ok) return null;
-  const data = await res.json();
-  if (data.status !== 'ok') return null;
-  return data.items || [];
+// Fetch RSS via OUR OWN proxy - no rate limits, no CORS issues
+export function proxyUrl(url) {
+  return `${PROXY}${encodeURIComponent(url)}`;
 }
 
-// Process feeds in small batches with delays to avoid 429
-export async function fetchFeedsInBatches(feedsList, batchSize = 3, delayMs = 1200) {
-  const results = [];
-  for (let i = 0; i < feedsList.length; i += batchSize) {
-    const batch = feedsList.slice(i, i + batchSize);
-    const batchResults = await Promise.allSettled(
-      batch.map(({ source, feed }) => fetchOneFeed(source, feed))
-    );
-    batchResults.forEach(r => {
-      if (r.status === 'fulfilled' && r.value) results.push(...r.value);
-    });
-    // Don't delay after last batch
-    if (i + batchSize < feedsList.length) {
-      await delay(delayMs);
-    }
-  }
-  return results;
-}
-
-async function fetchOneFeed(source, feed) {
+// Parse RSS XML text into article objects
+export function parseRSSItems(xmlText, source, feed) {
   try {
-    const items = await fetchFeedJSON(feed.url);
-    if (!items) return [];
-    
-    return items.slice(0, 10).map((item, index) => {
-      const title = (item.title || '').trim();
-      const link = (item.link || '').trim();
-      let desc = (item.description || '').replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
-      if (desc.length > 160) desc = desc.slice(0, 160) + '...';
-      
-      let image = item.thumbnail || '';
-      if (!image && item.enclosure?.link) image = item.enclosure.link;
+    const parser = new DOMParser();
+    const xml = parser.parseFromString(xmlText, 'text/xml');
+    if (xml.querySelector('parsererror')) return [];
+
+    const items = xml.querySelectorAll('item');
+    const articles = [];
+
+    items.forEach((item, i) => {
+      if (i >= 10) return;
+      const title = item.querySelector('title')?.textContent?.trim() || '';
+      const link = item.querySelector('link')?.textContent?.trim() || '';
+      const desc = item.querySelector('description')?.textContent?.trim() || '';
+      const pubDate = item.querySelector('pubDate')?.textContent?.trim() || '';
+
+      let image = '';
+      const enc = item.querySelector('enclosure[type^="image"]');
+      if (enc) image = enc.getAttribute('url') || '';
       if (!image) {
-        const m = (item.description || '').match(/<img[^>]+src=["']([^"']+)["']/i);
+        const media = item.getElementsByTagNameNS('http://search.yahoo.com/mrss/', 'content')[0]
+          || item.getElementsByTagNameNS('http://search.yahoo.com/mrss/', 'thumbnail')[0];
+        if (media) image = media.getAttribute('url') || '';
+      }
+      if (!image) {
+        const m = desc.match(/<img[^>]+src=["']([^"']+)["']/i);
         if (m) image = m[1];
       }
-      
-      return {
-        id: `${source.id}-${feed.category}-${index}`,
-        title,
-        link,
-        description: desc,
-        image,
-        pubDate: item.pubDate ? new Date(item.pubDate) : new Date(),
-        source: source.name,
-        sourceId: source.id,
-        sourceColor: source.color,
-        category: feed.category,
-      };
-    }).filter(a => a.title.length > 5);
-  } catch {
-    return [];
-  }
-}
 
-export function getProxiedUrl(url) {
-  return `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+      const cleanDesc = desc.replace(/<[^>]*>/g, '').replace(/&\w+;/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 160);
+
+      if (title.length > 5) {
+        articles.push({
+          id: `${source.id}-${feed.category}-${i}`,
+          title, link, image,
+          description: cleanDesc,
+          pubDate: pubDate ? new Date(pubDate) : new Date(),
+          source: source.name,
+          sourceId: source.id,
+          sourceColor: source.color,
+          category: feed.category,
+        });
+      }
+    });
+    return articles;
+  } catch { return []; }
 }

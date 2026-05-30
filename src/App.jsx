@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { NEWS_SOURCES, CATEGORIES, fetchFeedsInBatches } from './newsSources';
+import { NEWS_SOURCES, CATEGORIES, proxyUrl, parseRSSItems } from './newsSources';
 import Header from './components/Header';
 import NewsFeed from './components/NewsFeed';
 import Sidebar from './components/Sidebar';
@@ -30,19 +30,32 @@ function App() {
     localStorage.setItem('vn-bookmarks', JSON.stringify(bookmarks));
   }, [bookmarks]);
 
+  const fetchOneFeed = useCallback(async (source, feed) => {
+    try {
+      const res = await fetch(proxyUrl(feed.url));
+      if (!res.ok) return [];
+      const text = await res.text();
+      return parseRSSItems(text, source, feed);
+    } catch { return []; }
+  }, []);
+
   const fetchAllFeeds = useCallback(async () => {
     setLoading(true);
 
-    // Build flat list of all feeds with source info
-    const allFeedRequests = [];
+    // Build all feed requests
+    const requests = [];
     for (const source of NEWS_SOURCES) {
       for (const feed of source.feeds) {
-        allFeedRequests.push({ source, feed });
+        requests.push(fetchOneFeed(source, feed));
       }
     }
 
-    // Fetch in batches of 3 with 1.5s delay (avoids rss2json 429 rate limit)
-    const allArticles = await fetchFeedsInBatches(allFeedRequests, 3, 1500);
+    // Fire all at once - our own proxy has no rate limits
+    const results = await Promise.allSettled(requests);
+    const allArticles = [];
+    results.forEach(r => {
+      if (r.status === 'fulfilled') allArticles.push(...r.value);
+    });
 
     // Sort by date, deduplicate
     allArticles.sort((a, b) => b.pubDate - a.pubDate);
@@ -56,7 +69,7 @@ function App() {
 
     setArticles(unique);
     setLoading(false);
-  }, []);
+  }, [fetchOneFeed]);
 
   useEffect(() => {
     fetchAllFeeds();
