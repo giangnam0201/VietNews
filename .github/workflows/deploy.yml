@@ -117,6 +117,7 @@ jobs:
 
   create-release:
     needs: [build-web, build-android, build-electron]
+    if: always() && needs.build-web.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

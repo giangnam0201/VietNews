@@ -38,15 +38,14 @@
           ]
         }
       ],
-      "icon": "public/icon.png",
+      "icon": "public/icon-256.png",
       "artifactName": "VietNews-Setup-${version}.${ext}"
     },
     "nsis": {
       "oneClick": true,
       "perMachine": false,
       "allowToChangeInstallationDirectory": false,
-      "deleteAppDataOnUninstall": true,
-      "installerIcon": "public/icon.png"
+      "deleteAppDataOnUninstall": true
     },
     "mac": {
       "target": [
