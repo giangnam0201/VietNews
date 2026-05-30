@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { NEWS_SOURCES, CATEGORIES, fetchRSS } from './newsSources';
+import { NEWS_SOURCES, CATEGORIES, getRss2JsonUrl } from './newsSources';
 import Header from './components/Header';
 import NewsFeed from './components/NewsFeed';
 import Sidebar from './components/Sidebar';
@@ -36,67 +36,46 @@ function App() {
 
   const parseRSSFeed = useCallback(async (source, feed) => {
     try {
-      const text = await fetchRSS(feed.url);
-      if (!text) return [];
+      const apiUrl = getRss2JsonUrl(feed.url);
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 12000);
       
-      const parser = new DOMParser();
-      const xml = parser.parseFromString(text, 'text/xml');
+      const response = await fetch(apiUrl, { signal: controller.signal });
+      clearTimeout(timeout);
       
-      // Check for parse errors
-      if (xml.querySelector('parsererror')) return [];
+      if (!response.ok) return [];
       
-      const items = xml.querySelectorAll('item');
+      const data = await response.json();
+      if (data.status !== 'ok' || !data.items) return [];
+      
       const parsedArticles = [];
       
-      items.forEach((item, index) => {
-        if (index >= 12) return;
+      data.items.slice(0, 12).forEach((item, index) => {
+        const title = (item.title || '').trim();
+        const link = (item.link || '').trim();
+        const description = (item.description || '').replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim().slice(0, 180);
+        const pubDate = item.pubDate || '';
         
-        const title = item.querySelector('title')?.textContent?.trim() || '';
-        const link = item.querySelector('link')?.textContent?.trim() || 
-                     item.querySelector('link')?.getAttribute('href') || '';
-        const description = item.querySelector('description')?.textContent?.trim() || '';
-        const pubDate = item.querySelector('pubDate')?.textContent?.trim() || '';
-        
-        // Extract image from multiple sources
-        let image = '';
-        const enclosure = item.querySelector('enclosure[type^="image"]');
-        if (enclosure) {
-          image = enclosure.getAttribute('url') || '';
+        // Extract image - rss2json provides thumbnail/enclosure
+        let image = item.thumbnail || '';
+        if (!image && item.enclosure && item.enclosure.link) {
+          image = item.enclosure.link;
         }
         if (!image) {
-          const media = item.getElementsByTagNameNS('http://search.yahoo.com/mrss/', 'content')[0]
-            || item.getElementsByTagNameNS('http://search.yahoo.com/mrss/', 'thumbnail')[0];
-          if (media) image = media.getAttribute('url') || '';
-        }
-        if (!image) {
-          const imgMatch = description.match(/<img[^>]+src=["']([^"']+)["']/i);
+          const imgMatch = (item.description || '').match(/<img[^>]+src=["']([^"']+)["']/i);
           if (imgMatch) image = imgMatch[1];
         }
-        if (!image) {
-          const content = item.querySelector('content\\:encoded')?.textContent || '';
-          const imgMatch = content.match(/<img[^>]+src=["']([^"']+)["']/i);
+        if (!image && item.content) {
+          const imgMatch = item.content.match(/<img[^>]+src=["']([^"']+)["']/i);
           if (imgMatch) image = imgMatch[1];
         }
-        
-        // Clean description
-        const cleanDesc = description
-          .replace(/<!\[CDATA\[|\]\]>/g, '')
-          .replace(/<[^>]*>/g, '')
-          .replace(/&lt;.*?&gt;/g, '')
-          .replace(/&amp;/g, '&')
-          .replace(/&quot;/g, '"')
-          .replace(/&#39;/g, "'")
-          .replace(/&nbsp;/g, ' ')
-          .replace(/\s+/g, ' ')
-          .trim()
-          .slice(0, 180);
         
         if (title && title.length > 5) {
           parsedArticles.push({
             id: `${source.id}-${index}-${title.slice(0, 20).replace(/\s/g, '')}`,
             title,
             link,
-            description: cleanDesc,
+            description,
             image,
             pubDate: pubDate ? new Date(pubDate) : new Date(),
             source: source.name,

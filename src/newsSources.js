@@ -1,5 +1,8 @@
 // Vietnamese news RSS feeds
-// Fetch directly first (many VN news sites allow CORS), fallback to allorigins proxy
+// Using rss2json.com API - reliable, fast, purpose-built for RSS parsing
+// No CORS issues since it's a proper API
+
+const RSS2JSON_BASE = 'https://api.rss2json.com/v1/api.json?rss_url=';
 
 export const NEWS_SOURCES = [
   {
@@ -26,7 +29,7 @@ export const NEWS_SOURCES = [
       { url: 'https://thanhnien.vn/rss/home.rss', category: 'Mới nhất' },
       { url: 'https://thanhnien.vn/rss/thoi-su.rss', category: 'Thời sự' },
       { url: 'https://thanhnien.vn/rss/the-gioi.rss', category: 'Thế giới' },
-      { url: 'https://thanhnien.vn/rss/tai-chinh-kinh-doanh.rss', category: 'Kinh doanh' },
+      { url: 'https://thanhnien.vn/rss/kinh-doanh.rss', category: 'Kinh doanh' },
       { url: 'https://thanhnien.vn/rss/giai-tri.rss', category: 'Giải trí' },
       { url: 'https://thanhnien.vn/rss/the-thao.rss', category: 'Thể thao' },
       { url: 'https://thanhnien.vn/rss/giao-duc.rss', category: 'Giáo dục' },
@@ -65,23 +68,11 @@ export const NEWS_SOURCES = [
     ]
   },
   {
-    id: 'kenh14',
-    name: 'Kênh 14',
-    color: '#F57C00',
-    feeds: [
-      { url: 'https://kenh14.vn/home.rss', category: 'Mới nhất' },
-      { url: 'https://kenh14.vn/star.rss', category: 'Giải trí' },
-      { url: 'https://kenh14.vn/doi-song.rss', category: 'Đời sống' },
-      { url: 'https://kenh14.vn/xa-hoi.rss', category: 'Thời sự' },
-      { url: 'https://kenh14.vn/the-gioi.rss', category: 'Thế giới' },
-    ]
-  },
-  {
     id: 'vietnamnet',
     name: 'VietNamNet',
     color: '#6A1B9A',
     feeds: [
-      { url: 'https://vietnamnet.vn/rss/home.rss', category: 'Mới nhất' },
+      { url: 'https://vietnamnet.vn/rss/tin-moi-nhat.rss', category: 'Mới nhất' },
       { url: 'https://vietnamnet.vn/rss/thoi-su.rss', category: 'Thời sự' },
       { url: 'https://vietnamnet.vn/rss/kinh-doanh.rss', category: 'Kinh doanh' },
       { url: 'https://vietnamnet.vn/rss/giai-tri.rss', category: 'Giải trí' },
@@ -93,22 +84,6 @@ export const NEWS_SOURCES = [
     ]
   },
   {
-    id: 'zingnews',
-    name: 'ZNews',
-    color: '#0277BD',
-    feeds: [
-      { url: 'https://znews.vn/rss/tin-moi-nhat.rss', category: 'Mới nhất' },
-      { url: 'https://znews.vn/rss/xa-hoi.rss', category: 'Thời sự' },
-      { url: 'https://znews.vn/rss/the-gioi.rss', category: 'Thế giới' },
-      { url: 'https://znews.vn/rss/kinh-doanh-tai-chinh.rss', category: 'Kinh doanh' },
-      { url: 'https://znews.vn/rss/giai-tri.rss', category: 'Giải trí' },
-      { url: 'https://znews.vn/rss/the-thao.rss', category: 'Thể thao' },
-      { url: 'https://znews.vn/rss/giao-duc.rss', category: 'Giáo dục' },
-      { url: 'https://znews.vn/rss/suc-khoe.rss', category: 'Sức khỏe' },
-      { url: 'https://znews.vn/rss/cong-nghe.rss', category: 'Công nghệ' },
-    ]
-  },
-  {
     id: 'laodong',
     name: 'Lao Động',
     color: '#BF360C',
@@ -117,16 +92,6 @@ export const NEWS_SOURCES = [
       { url: 'https://laodong.vn/rss/thoi-su.rss', category: 'Thời sự' },
       { url: 'https://laodong.vn/rss/the-gioi.rss', category: 'Thế giới' },
       { url: 'https://laodong.vn/rss/kinh-te.rss', category: 'Kinh doanh' },
-    ]
-  },
-  {
-    id: 'nguoiduatin',
-    name: 'Người Đưa Tin',
-    color: '#E65100',
-    feeds: [
-      { url: 'https://www.nguoiduatin.vn/rss/home.rss', category: 'Mới nhất' },
-      { url: 'https://www.nguoiduatin.vn/rss/phap-luat.rss', category: 'Pháp luật' },
-      { url: 'https://www.nguoiduatin.vn/rss/xa-hoi.rss', category: 'Thời sự' },
     ]
   },
   {
@@ -158,38 +123,12 @@ export const CATEGORIES = [
   'Pháp luật',
 ];
 
-// Fetch RSS directly - no proxy needed for most Vietnamese news sites
-// If direct fails due to CORS, try allorigins as fallback
-export async function fetchRSS(url) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 10000);
-  
-  try {
-    // Try direct fetch first
-    const response = await fetch(url, { signal: controller.signal });
-    clearTimeout(timeout);
-    if (response.ok) return await response.text();
-  } catch (e) {
-    clearTimeout(timeout);
-  }
-  
-  // Fallback to allorigins proxy if direct fetch fails (CORS issue)
-  const controller2 = new AbortController();
-  const timeout2 = setTimeout(() => controller2.abort(), 10000);
-  
-  try {
-    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-    const response = await fetch(proxyUrl, { signal: controller2.signal });
-    clearTimeout(timeout2);
-    if (response.ok) return await response.text();
-  } catch (e) {
-    clearTimeout(timeout2);
-  }
-  
-  return null;
+// Use rss2json API - no CORS issues, returns JSON directly
+export function getRss2JsonUrl(rssUrl) {
+  return `${RSS2JSON_BASE}${encodeURIComponent(rssUrl)}`;
 }
 
-// For article scraping - always needs proxy since we're loading full HTML pages
+// For article scraping - use allorigins since we need raw HTML
 export function getProxiedUrl(url) {
   return `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
 }
