@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { NEWS_SOURCES, CATEGORIES, getProxiedUrl, rotateProxy, fetchWithFallback } from './newsSources';
+import { NEWS_SOURCES, CATEGORIES, fetchRSS } from './newsSources';
 import Header from './components/Header';
 import NewsFeed from './components/NewsFeed';
 import Sidebar from './components/Sidebar';
@@ -36,11 +36,9 @@ function App() {
 
   const parseRSSFeed = useCallback(async (source, feed) => {
     try {
-      const proxyUrl = getProxiedUrl(feed.url);
-      const response = await fetchWithFallback(proxyUrl);
-      if (!response.ok) return [];
+      const text = await fetchRSS(feed.url);
+      if (!text) return [];
       
-      const text = await response.text();
       const parser = new DOMParser();
       const xml = parser.parseFromString(text, 'text/xml');
       
@@ -144,11 +142,10 @@ function App() {
       }
     });
     
-    // If no results, try rotating proxy
+    // If no results from priority feeds, try a few more
     if (allArticles.length === 0) {
-      rotateProxy();
       const retryResults = await Promise.allSettled(
-        priorityFeeds.slice(0, 3).map(({ source, feed }) => parseRSSFeed(source, feed))
+        priorityFeeds.slice(0, 5).map(({ source, feed }) => parseRSSFeed(source, feed))
       );
       retryResults.forEach(result => {
         if (result.status === 'fulfilled' && result.value) {

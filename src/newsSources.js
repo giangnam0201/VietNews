@@ -1,11 +1,5 @@
-// Vietnamese news RSS feeds - Multiple CORS proxies for reliability
-const CORS_PROXIES = [
-  'https://api.allorigins.win/raw?url=',
-  'https://corsproxy.io/?',
-  'https://api.codetabs.com/v1/proxy?quest=',
-];
-
-let currentProxyIndex = 0;
+// Vietnamese news RSS feeds
+// Fetch directly first (many VN news sites allow CORS), fallback to allorigins proxy
 
 export const NEWS_SOURCES = [
   {
@@ -164,19 +158,38 @@ export const CATEGORIES = [
   'Pháp luật',
 ];
 
-export function getProxiedUrl(url) {
-  const proxy = CORS_PROXIES[currentProxyIndex];
-  return `${proxy}${encodeURIComponent(url)}`;
-}
-
-export function rotateProxy() {
-  currentProxyIndex = (currentProxyIndex + 1) % CORS_PROXIES.length;
-}
-
-export function fetchWithFallback(url, options = {}) {
+// Fetch RSS directly - no proxy needed for most Vietnamese news sites
+// If direct fails due to CORS, try allorigins as fallback
+export async function fetchRSS(url) {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 8000);
+  const timeout = setTimeout(() => controller.abort(), 10000);
   
-  return fetch(url, { ...options, signal: controller.signal })
-    .finally(() => clearTimeout(timeout));
+  try {
+    // Try direct fetch first
+    const response = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeout);
+    if (response.ok) return await response.text();
+  } catch (e) {
+    clearTimeout(timeout);
+  }
+  
+  // Fallback to allorigins proxy if direct fetch fails (CORS issue)
+  const controller2 = new AbortController();
+  const timeout2 = setTimeout(() => controller2.abort(), 10000);
+  
+  try {
+    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+    const response = await fetch(proxyUrl, { signal: controller2.signal });
+    clearTimeout(timeout2);
+    if (response.ok) return await response.text();
+  } catch (e) {
+    clearTimeout(timeout2);
+  }
+  
+  return null;
+}
+
+// For article scraping - always needs proxy since we're loading full HTML pages
+export function getProxiedUrl(url) {
+  return `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
 }
